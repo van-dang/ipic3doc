@@ -1,0 +1,276 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Enabling OpenMP tasking in iPIC3D &mdash; ipic3doc 0.0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ipic3doc 0.0.1 documentation" href="index.html"/>
+        <link rel="prev" title="Enabling OpenMP threading support in MPI in iPIC3D" href="threads.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ipic3doc
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="run.html">Compiling and running iPIC3D</a></li>
+<li class="toctree-l1"><a class="reference internal" href="threads.html">Enabling OpenMP threading support in MPI in iPIC3D</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Enabling OpenMP tasking in iPIC3D</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-details">Implementation details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scaling-tests">Scaling tests</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">ipic3doc</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Enabling OpenMP tasking in iPIC3D</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/tasks.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="enabling-openmp-tasking-in-ipic3d">
+<h1>Enabling OpenMP tasking in iPIC3D<a class="headerlink" href="#enabling-openmp-tasking-in-ipic3d" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="implementation-details">
+<h2>Implementation details<a class="headerlink" href="#implementation-details" title="Permalink to this headline">¶</a></h2>
+<p>In order to port the version of iPIC3D based on MPI_THREAD_MULTIPLE to the task-based version, the existing for-loops in the particles/Particles3Dcomm.cpp and particles/Particles3D.cpp files were re-written with the use of</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1">#pragma omp task</span>
+</pre></div>
+</div>
+<p>In general, there are two options of how to change for-loops to enable tasking:</p>
+<p><em>1) Single task producer</em></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">void</span> <span class="n">foo</span><span class="p">(</span><span class="nb">float</span><span class="o">*</span> <span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="o">*</span> <span class="n">y</span><span class="p">,</span> <span class="nb">float</span> <span class="n">a</span><span class="p">,</span> <span class="nb">int</span> <span class="n">n</span><span class="p">)</span>
+<span class="p">{</span>
+   <span class="c1">#pragma omp parallel</span>
+   <span class="p">{</span>
+      <span class="c1">#pragma omp single</span>
+      <span class="p">{</span>
+         <span class="k">for</span> <span class="p">(</span><span class="nb">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+            <span class="c1">#pragma omp task</span>
+            <span class="p">{</span>
+               <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">a</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+            <span class="p">}</span>
+      <span class="p">}</span>
+   <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This is a common pattern, but it is NUMA unfriendly. Here the “#pragma omp single” directive allows only one thread to execute the for-loop, while the rest of the threads in the team wait at the implicit barrier at the end of the “single” construct. At the each iteration, a task is created.</p>
+<p><em>2) Parallel task producer</em></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">void</span> <span class="n">bar</span><span class="p">(</span><span class="nb">float</span><span class="o">*</span> <span class="n">x</span><span class="p">,</span> <span class="nb">float</span><span class="o">*</span> <span class="n">y</span><span class="p">,</span> <span class="nb">float</span> <span class="n">a</span><span class="p">,</span> <span class="nb">int</span> <span class="n">n</span><span class="p">)</span>
+<span class="p">{</span>
+   <span class="c1">#pragma omp parallel</span>
+   <span class="p">{</span>
+      <span class="c1">#pragma omp for</span>
+      <span class="p">{</span>
+         <span class="k">for</span> <span class="p">(</span><span class="nb">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+            <span class="c1">#pragma omp task</span>
+            <span class="p">{</span>
+               <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="n">a</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+            <span class="p">}</span>
+      <span class="p">}</span>
+   <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This approach is more NUMA friendly and it was used for iPIC3D. Here the task creation loop is shared among the threads in the team.</p>
+</div>
+<div class="section" id="scaling-tests">
+<h2>Scaling tests<a class="headerlink" href="#scaling-tests" title="Permalink to this headline">¶</a></h2>
+<p>In this section we will discuss the performance results from the weak scaling tests. Tests were performed on the Beskow supercomputer at the PDC Center for High Performance Computing at the KTH Royal Institute of Technology. To compare the original version of the iPIC3D code (based on pure MPI) with the new version (based on OpenMP tasking) we used two standard simulation cases called GEM 3D and Magnetosphere 3D. In addition, we used two different data sizes/regimes for both simulation cases:</p>
+<ul class="simple">
+<li>Field solver dominated regime. Here, a relatively small number of particles (27 per cell) is used. The most computationally expensive part of the iPIC3D code results in the Maxwell field solver.</li>
+<li>Particle dominated regime. It is characterised by a large number of particles (1,000 per cell). The most computationally expensive part of the iPIC3D code results in the particle mover.</li>
+</ul>
+<p>Thus, there were four different cases (two simulation versions with two regimes). Each of these simulations has been executed on the increasing number of cores from 32, 64, 128 and up to 256 cores. The presented results here are for the cases with two, four and eight OpenMP threads. In order to ensure a fair comparison, the number of iterations in the linear solver was fixed to 20, although in a real simulation the number of iterations depends on the speed of convergence.</p>
+<p>Figure 1, Figure 2, Figure 3 and Figure 4 show the results of the weak scaling tests for each of the four cases. Three-dimensional decomposition of MPI processes on X-, Y- and Z-axes was used, resulting in different topologies of MPI processes, each having two, four, and then eight threads in addition. The total number of particles and cells in a simulation are calculated from nxc*nyc*nzc*npcelx*npcely*npcelz and nxc*nyc*nzc, respectively. Thus, for example, for the particle dominated Magnetosphere 3D simulation on 32 cores (2x2x2 MPI processes x 4 OpenMP threads), there were used 27x106 particles and 30x30x30 cells, and the simulation size increased proportionally to the number of processes.</p>
+<div class="figure" id="id1">
+<img alt="_images/gemf-tasks.png" src="_images/gemf-tasks.png" />
+<p class="caption"><span class="caption-text">Figure 1. Weak scaling test for the field solver dominated GEM 3D simulation of the original and new versions of the iPIC3D code</span></p>
+</div>
+<div class="figure" id="id2">
+<img alt="_images/gemp-tasks.png" src="_images/gemp-tasks.png" />
+<p class="caption"><span class="caption-text">Figure 2. Weak scaling test for the particle dominated GEM 3D simulation of the original and new versions of the iPIC3D code</span></p>
+</div>
+<div class="figure" id="id3">
+<img alt="_images/magf-tasks.png" src="_images/magf-tasks.png" />
+<p class="caption"><span class="caption-text">Figure 3. Weak scaling test for the field solver dominated Magnetosphere 3D simulation of the original and new versions of the iPIC3D code</span></p>
+</div>
+<div class="figure" id="id4">
+<img alt="_images/magp-tasks.png" src="_images/magp-tasks.png" />
+<p class="caption"><span class="caption-text">Figure 4. Weak scaling test for the particle dominated Magnetosphere 3D simulation of the original and new versions of the iPIC3D code</span></p>
+</div>
+<p>These figures show that the original iPIC3D code with disabled OpenMP (meaning pure MPI) and the new version with two threads per one MPI process had the longest execution time. The task-based version with eight threads per one MPI process is always faster than with two or four threads. On 256 cores it shows 9-15% of speedup comparing to the pure-MPI-based version and 9-14% when comparing to the tasked-based version with two threads per one MPI process.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="threads.html" class="btn btn-neutral" title="Enabling OpenMP threading support in MPI in iPIC3D" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Dana Akhmetova and Van Dang Nguyen.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

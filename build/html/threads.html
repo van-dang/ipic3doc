@@ -1,0 +1,603 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Enabling OpenMP threading support in MPI in iPIC3D &mdash; ipic3doc 0.0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="ipic3doc 0.0.1 documentation" href="index.html"/>
+        <link rel="next" title="Enabling OpenMP tasking in iPIC3D" href="tasks.html"/>
+        <link rel="prev" title="Compiling and running iPIC3D" href="run.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> ipic3doc
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="run.html">Compiling and running iPIC3D</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Enabling OpenMP threading support in MPI in iPIC3D</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#implementation-details">Implementation details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scaling-tests">Scaling tests</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tasks.html">Enabling OpenMP tasking in iPIC3D</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">ipic3doc</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Enabling OpenMP threading support in MPI in iPIC3D</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/threads.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="enabling-openmp-threading-support-in-mpi-in-ipic3d">
+<h1>Enabling OpenMP threading support in MPI in iPIC3D<a class="headerlink" href="#enabling-openmp-threading-support-in-mpi-in-ipic3d" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="implementation-details">
+<h2>Implementation details<a class="headerlink" href="#implementation-details" title="Permalink to this headline">¶</a></h2>
+<p>As the first step to port the original version of the iPIC3D code to the OpenMP threading version, the MPI initialisation routine has been changed: in utility/MPIdata.cpp the function MPI_Init() was replaced by MPI_Init_thread(), and now it looks as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">MPI_Init_thread</span><span class="p">(</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">MPI_THREAD_MULTIPLE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">provided</span> <span class="p">)</span>
+</pre></div>
+</div>
+<p>This allowed to initialise the MPI execution environment. MPI_Init_thread() has two additional parameters for the level of thread support required, and for the level of thread support provided by the MPI library implementation. The general C/C++ syntax of this function is:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1">#include &lt;mpi.h&gt;</span>
+<span class="nb">int</span> <span class="n">MPI_Init_thread</span><span class="p">(</span><span class="nb">int</span> <span class="o">*</span><span class="n">argc</span><span class="p">,</span> <span class="n">char</span> <span class="o">***</span><span class="n">argv</span><span class="p">,</span> <span class="nb">int</span> <span class="n">required</span><span class="p">,</span> <span class="nb">int</span> <span class="o">*</span><span class="n">provided</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>“required” specifies the requested level of thread support, and the actual level of support is returned into “provided”. After the initialization, a programmer may add OpenMP directives and runtime calls as long as he/she sticks to the level of thread safety that was specified in the call to MPI_Init_thread().</p>
+<p>In order to get the support from MPI that allows any thread to call the MPI library at any time, one has to have MPI_THREAD_MULTIPLE for the “required” variable and then the value of the “provided” variable has to be equal to 3.</p>
+<p>There are three another options for thread support that can be used in the MPI_Init_thread() function, they are described below.</p>
+<ul class="simple">
+<li>MPI_THREAD_SINGLE<ul>
+<li>Only one thread will execute. This represents a typical MPI-only application.</li>
+</ul>
+</li>
+<li>MPI_THREAD_FUNNELED<ul>
+<li>The process may be multi-threaded, but only the master thread will make calls to the MPI library (all MPI calls are funneled to the main thread). The thread that calls MPI_Init_thread() is from now on the main thread. To check whether a thread is the main thread, one may call the MPI_Is_thread_main() routine.</li>
+</ul>
+</li>
+<li>MPI_THREAD_SERIALIZED<ul>
+<li>The process may be multi-threaded, and multiple threads may make MPI calls, but only one at a time: MPI calls are not made concurrently from two distinct threads, thus all MPI calls are serialized.</li>
+</ul>
+</li>
+</ul>
+<p>With the MPI_THREAD_MULTIPLE option, any thread within any process is eligible to call MPI functions, and the MPI library is responsible for thread safety within that library and for libraries that it uses. Figure 1 illustrates two cases of the MPI and OpenMP programming models interoperability:</p>
+<ul class="simple">
+<li>without OpenMP thread support in an MPI library (on the left side of the figure);</li>
+<li>with enabling OpenMP thread support in an MPI library (on the right side of the figure).</li>
+</ul>
+<div class="figure" id="id1">
+<img alt="_images/threading.png" src="_images/threading.png" />
+<p class="caption"><span class="caption-text">Figure 1. OpenMP threading in an MPI code</span></p>
+</div>
+<p>In order to select a thread level higher than MPI_THREAD_SINGLE, a programmer should set the environment variable MPICH_MAX_THREAD_SAFETY, otherwise “provided” will return MPI_THREAD_SINGLE. For the case of MPI_THREAD_MULTIPLE, it should be as</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">export</span> <span class="n">MPICH_MAX_THREAD_SAFETY</span><span class="o">=</span><span class="n">multiple</span>
+</pre></div>
+</div>
+<p>In iPIC3D, halo exchange consists of three communication phases:</p>
+<ol class="arabic simple">
+<li>communication between faces;</li>
+<li>communication between edges;</li>
+<li>communication between corners.</li>
+</ol>
+<p>The first phase (communication between faces) includes six sequential calls to MPI_Irecv() and six sequential calls to MPI_Isend(). With the usage of MPI_THREAD_MULTIPLE, it is possible to parallelise each set of these calls. As there are only six independent serial calls to the non-blocking MPI receive functions and six – to the non-blocking MPI send functions, the maximal possible level of parallelism here is six. And therefore, with taking into account that the number of CPUs in a node of a supercomputer is a power of two, there are several possible strategies for the parallelization of the region (with two, four and eight threads). Table below describes these approaches.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="78%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>No MPI_THREAD_MULTIPLE</td>
+<td>6 MPI_Irecv() functions and 6 MPI_Isend() functions are called sequentially.</td>
+</tr>
+<tr class="row-even"><td>1 MPI process has
+2 OpenMP threads</td>
+<td>Within 1 MPI process, 2 OpenMP threads call MPI_Irecv() functions in parallel
+and then MPI_Isend() functions in parallel.</td>
+</tr>
+<tr class="row-odd"><td>1 MPI process has
+4 OpenMP threads</td>
+<td>Within 1 MPI process, 4 OpenMP threads call MPI_Irecv() functions in parallel
+and then MPI_Isend() functions in parallel, and thereafter 2 OpenMP threads
+do the same with MPI_Isend() and MPI_Irecv() functions.</td>
+</tr>
+<tr class="row-even"><td>1 MPI process has
+8 OpenMP threads</td>
+<td>Within 1 MPI process, every OpenMP thread (except 2) make calls to
+MPI_Irecv() in parallel and then to MPI_Isend() in parallel.</td>
+</tr>
+</tbody>
+</table>
+<p>Listing below shows halo exchange in iPIC3D for the phase of communication between faces, without MPI_THREAD_MULTIPLE, so threads cannot call an MPI function, and therefore all MPI function calls have to be sequential</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>if(left_neighborX != MPI_PROC_NULL &amp;&amp; left_neighborX != myrank)
+{
+  MPI_Irecv(&amp;vector[0][1][1], 1, yzFacetype, left_neighborX,
+  tag_XR, comm, &amp;reqList[recvcnt++]);
+  communicationCnt[0] = 1;
+}
+if(right_neighborX != MPI_PROC_NULL &amp;&amp; right_neighborX != myrank)
+{
+  MPI_Irecv(&amp;vector[nx-1][1][1], 1, yzFacetype, right_neighborX,
+  tag_XL, comm, &amp;reqList[recvcnt++]);
+  communicationCnt[1] = 1;
+}
+if(left_neighborY != MPI_PROC_NULL &amp;&amp; left_neighborY != myrank)
+{
+  MPI_Irecv(&amp;vector[1][0][1], 1, xzFacetype, left_neighborY,
+  tag_YR, comm, &amp;reqList[recvcnt++]);
+  communicationCnt[2] = 1;
+}
+if(right_neighborY != MPI_PROC_NULL &amp;&amp; right_neighborY != myrank)
+{
+  MPI_Irecv(&amp;vector[1][ny-1][1], 1, xzFacetype, right_neighborY,
+  tag_YL, comm, &amp;reqList[recvcnt++]);
+  communicationCnt[3] = 1;
+}
+if(left_neighborZ != MPI_PROC_NULL &amp;&amp; left_neighborZ != myrank)
+{
+  MPI_Irecv(&amp;vector[1][1][0], 1, xyFacetype, left_neighborZ,
+  tag_ZR, comm, &amp;reqList[recvcnt++]);
+  communicationCnt[4] = 1;
+}
+if(right_neighborZ != MPI_PROC_NULL&amp;&amp; right_neighborZ != myrank)
+{
+  MPI_Irecv(&amp;vector[1][1][nz-1], 1, xyFacetype, right_neighborZ,
+  tag_ZL, comm, &amp;reqList[recvcnt++]);
+  communicationCnt[5] = 1;
+}
+sendcnt = recvcnt;
+int offset = (isCenterFlag ?0:1);
+if(communicationCnt[0] == 1)
+{
+  MPI_Isend(&amp;vector[1+offset][1][1], 1, yzFacetype, left_neighborX,
+  tag_XL, comm, &amp;reqList[sendcnt++]);
+}
+if(communicationCnt[1] == 1)
+{
+  MPI_Isend(&amp;vector[nx-2-offset][1][1], 1, yzFacetype, right_neighborX,
+  tag_XR, comm, &amp;reqList[sendcnt++]);
+}
+if(communicationCnt[2] == 1)
+{
+  MPI_Isend(&amp;vector[1][1+offset][1], 1, xzFacetype, left_neighborY,
+  tag_YL, comm, &amp;reqList[sendcnt++]);
+}
+if(communicationCnt[3] == 1)
+{
+  MPI_Isend(&amp;vector[1][ny-2-offset][1], 1, xzFacetype, right_neighborY,
+  tag_YR, comm, &amp;reqList[sendcnt++]);
+}
+if(communicationCnt[4] == 1)
+{
+  MPI_Isend(&amp;vector[1][1][1+offset], 1, xyFacetype, left_neighborZ,
+  tag_ZL, comm, &amp;reqList[sendcnt++]);
+}
+if(communicationCnt[5] == 1)
+{
+  MPI_Isend(&amp;vector[1][1][nz-2-offset], 1, xyFacetype, right_neighborZ,
+  tag_ZR, comm, &amp;reqList[sendcnt++]);
+}
+assert_eq(recvcnt,sendcnt-recvcnt);
+…
+</pre></div>
+</div>
+<p>Another listing below illustrates the same case in iPIC3D, but with enabling OpenMP thread support for MPI for the case with four OpenMP threads, so with MPI_THREAD_MULTIPLE four threads call MPI functions in parallel. As there are six possible parallel calls to the MPI_Irecv() functions and another six – to the MPI_Isend() functions, four calls to MPI_Irecv() are executed by the threads in parallel, and then the remain two calls to MPI_Irecv() are done in parallel. Same strategy is applied to MPI_Isend().</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>#pragma omp parallel default(shared) private(id_thread,nthreads)
+{
+  id_thread = omp_get_thread_num();
+  nthreads = omp_get_num_threads();
+  …
+  if (nthreads==4)
+  {
+    if(id_thread==0)
+      if(left_neighborX != MPI_PROC_NULL &amp;&amp; left_neighborX != myrank )
+      {
+        #pragma omp critical
+        {
+          MPI_Irecv(&amp;vectorMPI_Isend(&amp;vector[1][1][[0][1][1], 1,
+          yzFacetype, left_neighborX,tag_XR, comm, &amp;reqList[recvcnt]);
+          recvcnt++;
+          communicationCnt[0] = 1;
+        }
+      }
+    if(id_thread==1)
+      if(right_neighborX != MPI_PROC_NULL &amp;&amp; right_neighborX != myrank )
+      {
+        #pragma omp critical
+        {
+          MPI_Irecv(&amp;vector[nx-1][1][1], 1, yzFacetype,
+          right_neighborX,tag_XL, comm, &amp;reqList[recvcnt]);
+          recvcnt++;
+          communicationCnt[1] = 1;
+        }
+      }
+    if(id_thread==2)
+      if(left_neighborY != MPI_PROC_NULL &amp;&amp; left_neighborY != myrank )
+      {
+        #pragma omp critical
+        {
+          MPI_Irecv(&amp;vector[1][0][1], 1, xzFacetype, left_neighborY,
+          tag_YR, comm, &amp;reqList[recvcnt]);
+          recvcnt++;
+          communicationCnt[2] = 1;
+        }
+      }
+    if(id_thread==3)
+      if(right_neighborY != MPI_PROC_NULL &amp;&amp; right_neighborY != myrank )
+      {
+        #pragma omp critical
+        {
+          MPI_Irecv(&amp;vector[1][ny-1][1], 1, xzFacetype,
+          right_neighborY,tag_YL, comm, &amp;reqList[recvcnt]);
+          recvcnt++;
+          communicationCnt[3] = 1;
+        }
+      }
+    if(id_thread==0)
+      if(left_neighborZ != MPI_PROC_NULL &amp;&amp; left_neighborZ != myrank )
+      {
+        #pragma omp critical
+        {
+          MPI_Irecv(&amp;vector[1][1][0],1, xyFacetype,
+          left_neighborZ,tag_ZR, comm, &amp;reqList[recvcnt]);
+          recvcnt++;
+          communicationCnt[4] = 1;
+        }
+      }
+    if(id_thread==1)
+      if(right_neighborZ != MPI_PROC_NULL&amp;&amp; right_neighborZ != myrank )
+      {
+        #pragma omp critical
+        {
+          MPI_Irecv(&amp;vector[1][1][nz-1], 1, xyFacetype,
+          right_neighborZ,tag_ZL, comm, &amp;reqList[recvcnt]);
+          recvcnt++;
+          communicationCnt[5] = 1;
+        }
+      }
+    #pragma omp barrier
+    if(id_thread==0)
+    {
+      sendcnt = recvcnt;
+      offset = (isCenterFlag ?0:1);
+    }
+    #pragma omp barrier
+    if(id_thread==0)
+      if(communicationCnt[0] == 1)
+      {
+        #pragma omp critical
+        {
+          MPI_Isend(&amp;vector[1+offset][1][1],1, yzFacetype,
+          left_neighborX, tag_XL, comm, &amp;reqList[sendcnt]);
+          sendcnt++;
+        }
+      }
+    if(id_thread==1)
+      if(communicationCnt[1] == 1)
+      {
+        #pragma omp critical
+        {
+          MPI_Isend(&amp;vector[nx-2-offset][1][1], 1, yzFacetype,
+          right_neighborX,tag_XR, comm, &amp;reqList[sendcnt]);
+          sendcnt++;
+        }
+      }
+    if(id_thread==2)
+      if(communicationCnt[2] == 1)
+      {
+        #pragma omp critical
+        {
+          MPI_Isend(&amp;vector[1][1+offset][1],1, xzFacetype,
+          left_neighborY, tag_YL, comm, &amp;reqList[sendcnt]);
+          sendcnt++;
+        }
+      }
+    if(id_thread==3)
+      if(communicationCnt[3] == 1)
+      {
+        #pragma omp critical
+        {
+          MPI_Isend(&amp;vector[1][ny-2-offset][1], 1, xzFacetype,
+          right_neighborY,tag_YR, comm, &amp;reqList[sendcnt]);
+          sendcnt++;
+        }
+      }
+    if(id_thread==0)
+      if(communicationCnt[4] == 1)
+      {
+        #pragma omp critical
+        {
+          MPI_Isend(&amp;vector[1][1][1+offset],1, xyFacetype,
+          left_neighborZ, tag_ZL, comm, &amp;reqList[sendcnt]);
+          sendcnt++;
+        }
+      }
+    if(id_thread==1)
+      if(communicationCnt[5] == 1)
+      {
+        #pragma omp critical
+        {
+          MPI_Isend(&amp;vector[1][1][nz-2-offset], 1, xyFacetype,
+          right_neighborZ,tag_ZR, comm, &amp;reqList[sendcnt]);
+          sendcnt++;
+        }
+      }
+    #pragma omp barrier
+    if(id_thread==0)
+    {
+      assert_eq(recvcnt,sendcnt-recvcnt);
+    }
+    #pragma omp barrier
+    …
+  }
+  …
+}
+</pre></div>
+</div>
+<p>The phase of communication between edges also consists of the number of calls to the MPI_Irecv() functions and to the MPI_Isend() functions. The phase of communication between corners uses two calls to MPI_Irecv() and two calls to MPI_Isend(). In order to parallelise these two phases, exactly the same approach has been used as for the phase of communication between faces.</p>
+</div>
+<div class="section" id="scaling-tests">
+<h2>Scaling tests<a class="headerlink" href="#scaling-tests" title="Permalink to this headline">¶</a></h2>
+<p>In this section we will discuss the performance results from the weak scaling tests. Tests were performed on the Beskow supercomputer at the PDC Center for High Performance Computing at the KTH Royal Institute of Technology. To compare the original version of the iPIC3D code with the new version, based on MPI threading support, we used two standard simulation cases called GEM 3D and Magnetosphere 3D. In addition, we used two different data sizes/regimes for both simulation cases:</p>
+<ul class="simple">
+<li>Field solver dominated regime. Here, a relatively small number of particles (27 per cell) is used. The most computationally expensive part of the iPIC3D code results in the Maxwell field solver.</li>
+<li>Particle dominated regime. It is characterised by a large number of particles (1,000 per cell). The most computationally expensive part of the iPIC3D code results in the particle mover.</li>
+</ul>
+<p>Thus, there were four different cases (two simulation versions with two regimes), and the input data for each case for 8 MPI processes are stated below.</p>
+<p>The input data for the field solver dominated GEM 3D simulation:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dt</span> <span class="o">=</span> <span class="mf">0.15</span> <span class="c1"># dt = time step</span>
+<span class="n">ncycles</span> <span class="o">=</span> <span class="mi">30000</span>    <span class="c1"># number of cycles</span>
+<span class="n">Lx</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lx = simulation box length - X direction</span>
+<span class="n">Ly</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Ly = simulation box length - Y direction</span>
+<span class="n">Lz</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lz = simulation box length - Z direction</span>
+<span class="n">nxc</span> <span class="o">=</span> <span class="mi">20</span>  <span class="c1"># nxc = number of cells - X direction</span>
+<span class="n">nyc</span> <span class="o">=</span> <span class="mi">20</span>  <span class="c1"># nyc = number of cells - Y direction</span>
+<span class="n">nzc</span> <span class="o">=</span> <span class="mi">20</span>  <span class="c1"># nzc = number of cells - Z direction</span>
+<span class="n">npcelx</span> <span class="o">=</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span>  <span class="c1"># npcelx = number of particles per cell – X direction</span>
+<span class="n">npcely</span> <span class="o">=</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span>  <span class="c1"># npcely = number of particles per cell – Y direction</span>
+<span class="n">npcelz</span> <span class="o">=</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span>  <span class="c1"># npcelz = number of particles per cell – Z direction</span>
+<span class="n">CGtol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span> <span class="c1"># CG solver stopping criterion tolerance</span>
+<span class="n">GMREStol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span>   <span class="c1"># GMRES solver stopping criterion tolerance</span>
+</pre></div>
+</div>
+<p>The input data for the particle dominated GEM 3D simulation:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dt</span> <span class="o">=</span> <span class="mf">0.15</span> <span class="c1"># dt = time step</span>
+<span class="n">ncycles</span> <span class="o">=</span> <span class="mi">1800</span>     <span class="c1"># number of cycles</span>
+<span class="n">Lx</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lx = simulation box length - X direction</span>
+<span class="n">Ly</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Ly = simulation box length - Y direction</span>
+<span class="n">Lz</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lz = simulation box length - Z direction</span>
+<span class="n">nxc</span> <span class="o">=</span> <span class="mi">20</span>  <span class="c1"># nxc = number of cells - X direction</span>
+<span class="n">nyc</span> <span class="o">=</span> <span class="mi">20</span>  <span class="c1"># nyc = number of cells - Y direction</span>
+<span class="n">nzc</span> <span class="o">=</span> <span class="mi">20</span>  <span class="c1"># nzc = number of cells - Z direction</span>
+<span class="n">npcelx</span> <span class="o">=</span> <span class="mi">10</span> <span class="mi">10</span> <span class="mi">10</span> <span class="mi">10</span>     <span class="c1"># npcelx = number of particles per cell – X direction</span>
+<span class="n">npcely</span> <span class="o">=</span> <span class="mi">10</span> <span class="mi">10</span> <span class="mi">10</span> <span class="mi">10</span>     <span class="c1"># npcely = number of particles per cell – Y direction</span>
+<span class="n">npcelz</span> <span class="o">=</span> <span class="mi">10</span> <span class="mi">10</span> <span class="mi">10</span> <span class="mi">10</span>     <span class="c1"># npcelz = number of particles per cell – Z direction</span>
+<span class="n">CGtol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span>   <span class="c1"># CG solver stopping criterion tolerance</span>
+<span class="n">GMREStol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span>  <span class="c1"># GMRES solver stopping criterion tolerance</span>
+</pre></div>
+</div>
+<p>The input data for the field solver dominated Magnetosphere 3D simulation:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dt</span> <span class="o">=</span> <span class="mf">0.15</span>  <span class="c1"># dt = time step</span>
+<span class="n">ncycles</span> <span class="o">=</span> <span class="mi">20000</span> <span class="c1"># number of cycles</span>
+<span class="n">Lx</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lx = simulation box length - X direction</span>
+<span class="n">Ly</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Ly = simulation box length - Y direction</span>
+<span class="n">Lz</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lz = simulation box length - Z direction</span>
+<span class="n">nxc</span> <span class="o">=</span> <span class="mi">30</span>  <span class="c1"># nxc = number of cells - X direction</span>
+<span class="n">nyc</span> <span class="o">=</span> <span class="mi">30</span>  <span class="c1"># nyc = number of cells - Y direction</span>
+<span class="n">nzc</span> <span class="o">=</span> <span class="mi">30</span>  <span class="c1"># nzc = number of cells - Z direction</span>
+<span class="n">npcelx</span> <span class="o">=</span> <span class="mi">3</span> <span class="mi">3</span>    <span class="c1"># npcelx = number of particles per cell – X direction</span>
+<span class="n">npcely</span> <span class="o">=</span> <span class="mi">3</span> <span class="mi">3</span>    <span class="c1"># npcely = number of particles per cell – Y direction</span>
+<span class="n">npcelz</span> <span class="o">=</span> <span class="mi">3</span> <span class="mi">3</span>    <span class="c1"># npcelz = number of particles per cell – Z direction</span>
+<span class="n">CGtol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span>    <span class="c1"># CG solver stopping criterion tolerance</span>
+<span class="n">GMREStol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span> <span class="c1"># GMRES solver stopping criterion tolerance</span>
+</pre></div>
+</div>
+<p>The input data for the particle dominated Magnetosphere 3D simulation:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dt</span> <span class="o">=</span> <span class="mf">0.15</span>  <span class="c1"># dt = time step</span>
+<span class="n">ncycles</span> <span class="o">=</span> <span class="mi">800</span>   <span class="c1"># number of cycles</span>
+<span class="n">Lx</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lx = simulation box length - X direction</span>
+<span class="n">Ly</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Ly = simulation box length - Y direction</span>
+<span class="n">Lz</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Lz = simulation box length - Z direction</span>
+<span class="n">nxc</span> <span class="o">=</span> <span class="mi">30</span>  <span class="c1"># nxc = number of cells - X direction</span>
+<span class="n">nyc</span> <span class="o">=</span> <span class="mi">30</span>  <span class="c1"># nyc = number of cells - Y direction</span>
+<span class="n">nzc</span> <span class="o">=</span> <span class="mi">30</span>  <span class="c1"># nzc = number of cells - Z direction</span>
+<span class="n">npcelx</span> <span class="o">=</span> <span class="mi">10</span> <span class="mi">10</span>  <span class="c1"># npcelx = number of particles per cell – X direction</span>
+<span class="n">npcely</span> <span class="o">=</span> <span class="mi">10</span> <span class="mi">10</span>  <span class="c1"># npcely = number of particles per cell – Y direction</span>
+<span class="n">npcelz</span> <span class="o">=</span> <span class="mi">10</span> <span class="mi">10</span>  <span class="c1"># npcelz = number of particles per cell – Z direction</span>
+<span class="n">CGtol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span>    <span class="c1"># CG solver stopping criterion tolerance</span>
+<span class="n">GMREStol</span> <span class="o">=</span> <span class="mi">1</span><span class="n">E</span><span class="o">-</span><span class="mi">3</span> <span class="c1"># GMRES solver stopping criterion tolerance</span>
+</pre></div>
+</div>
+<p>Each of four test cases (two version of codes for two simulation cases) has been executed on the increasing number of cores from 32, 64, 128 and up to 256 cores. The presented results here are for the cases with two, four and eight OpenMP threads. In order to ensure a fair comparison, the number of iterations in the linear solver was fixed to 20, although in a real simulation the number of iterations depends on the speed of convergence.</p>
+<p>Figures 2, 3, 4, and 5 show the results of the weak scaling tests for each of the four cases. Three-dimensional decomposition of MPI processes on X-, Y- and Z-axes was used, resulting in different topologies of MPI processes, each having two, four, and then eight threads in addition. The total number of particles and cells in a simulation are calculated from nxc*nyc*nzc*npcelx*npcely*npcelz and nxc*nyc*nzc, respectively. Thus, for example, for the particle dominated Magnetosphere 3D simulation on 32 cores (2x2x2 MPI processes x 4 OpenMP threads), there were used 27x106 particles and 30x30x30 cells, and the simulation size increased proportionally to the number of processes.</p>
+<div class="figure" id="id2">
+<img alt="_images/gemf.png" src="_images/gemf.png" />
+<p class="caption"><span class="caption-text">Figure 2. Weak scaling test for the field solver dominated GEM 3D simulation of the original and new hybrid versions of the iPIC3D code</span></p>
+</div>
+<div class="figure" id="id3">
+<img alt="_images/gemp.png" src="_images/gemp.png" />
+<p class="caption"><span class="caption-text">Figure 3. Weak scaling test for the particle dominated GEM 3D simulation of the original and new hybrid versions of the iPIC3D code</span></p>
+</div>
+<div class="figure" id="id4">
+<img alt="_images/magf.png" src="_images/magf.png" />
+<p class="caption"><span class="caption-text">Figure 4. Weak scaling test for the field solver dominated Magnetosphere 3D simulation of the original and new hybrid versions of the iPIC3D code</span></p>
+</div>
+<div class="figure" id="id5">
+<img alt="_images/magp.png" src="_images/magp.png" />
+<p class="caption"><span class="caption-text">Figure 5. Weak scaling test for the particle dominated Magnetosphere 3D simulation of the original and new hybrid versions of the iPIC3D code</span></p>
+</div>
+<p>These figures show that, for all four simulations, in most of the cases the original iPIC3D code with disabled OpenMP (meaning pure MPI) was slowest. In the field solver dominated regimes (the two left pictures in Figure 3), the new version of iPIC3D is slower than the original version with enabled OpenMP on smaller number of cores, while on 256 cores the new hybrid implementation shows the lowest execution time (for example, with eight threads per one MPI process, it is 18-20% faster). In the particle dominated regimes (the two right pictures in Figure 3), the original and new iPIC3D implementations with equal number of threads show almost identical performance. Also, for all test runs of the new version of iPIC3D with two, four and eight threads, the fastest was the new version with eight threads per one MPI process, thus showing the scalability. On 256 cores it shows 16-31% of speedup comparing to iPIC3D based on the pure MPI and 9-14% when comparing to the new version with two threads per one MPI process.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tasks.html" class="btn btn-neutral float-right" title="Enabling OpenMP tasking in iPIC3D" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="run.html" class="btn btn-neutral" title="Compiling and running iPIC3D" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Dana Akhmetova and Van Dang Nguyen.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
